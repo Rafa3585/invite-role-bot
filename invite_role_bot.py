@@ -25,7 +25,6 @@ REQUIRED_INVITES = 3
 
 intents = discord.Intents.default()
 intents.members = True
-intents.invites = True
 intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -34,9 +33,9 @@ invite_cache = {}
 @bot.event
 async def on_ready():
     print(f"✅ Bot ligado como {bot.user}")
-    guild = bot.get_guild(GUILD_ID)
-    invites = await guild.invites()
-    invite_cache[guild.id] = {invite.code: invite.uses for invite in invites}
+    for guild in bot.guilds:
+        invites = await guild.invites()
+        invite_cache[guild.id] = {invite.code: invite.uses for invite in invites}
 
 @bot.event
 async def on_member_join(member):
@@ -61,5 +60,37 @@ async def on_member_join(member):
                     await member_to_edit.add_roles(role)
                     print(f"{inviter} recebeu o cargo '{ROLE_NAME}'!")
 
-bot.run(TOKEN)
+# --- Comando !convites ---
+@bot.command()
+async def convites(ctx, membro: discord.Member = None):
+    membro = membro or ctx.author
+    guild = ctx.guild
+    invites = await guild.invites()
 
+    total = sum(i.uses for i in invites if i.inviter == membro)
+    await ctx.send(f"🔗 {membro.mention} fez {total} convite(s) com sucesso.")
+
+# --- Comando !topconvites ---
+@bot.command()
+async def topconvites(ctx):
+    guild = ctx.guild
+    invites = await guild.invites()
+
+    ranking = {}
+    for invite in invites:
+        if invite.inviter not in ranking:
+            ranking[invite.inviter] = 0
+        ranking[invite.inviter] += invite.uses
+
+    if not ranking:
+        await ctx.send("Ninguém convidou ninguém ainda. 😢")
+        return
+
+    sorted_ranking = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
+    mensagem = "🏆 **Top Convidadores:**\n\n"
+    for i, (user, count) in enumerate(sorted_ranking[:10], start=1):
+        mensagem += f"**{i}.** {user.mention} — `{count}` convite(s)\n"
+
+    await ctx.send(mensagem)
+
+bot.run(TOKEN)
