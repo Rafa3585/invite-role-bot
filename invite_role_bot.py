@@ -24,6 +24,7 @@ ROLE_NAME = "autocop"
 REQUIRED_INVITES = 3
 
 intents = discord.Intents.default()
+intents.message_content = True
 intents.members = True
 intents.guilds = True
 
